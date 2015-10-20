@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Testing threejs</title>
+    <!--    <script type="text/javascript" scr="three.js"></script>-->
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/javascript" src="libs/three.js"></script>
+    <script type="text/javascript" src="libs/dat.gui.min.js"></script>
+    <script type="text/javascript" src="libs/stats.min.js"></script>
+    <script type="text/javascript" src="libs/OrbitControls.js"></script>
+    <script type="text/javascript">
+        var scene;
+        var camera;
+        var stats;
+        var renderer;
+        var controls;
+        var sun;
+        var stars = [];
+        window.onload = init;
+
+        function init() {
+            scene = new THREE.Scene();
+            //view_angle, ratio(width/height), near, far
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 20000);
+            scene.add(camera);
+            camera.position.set(0, 300, 0);
+            camera.lookAt(scene.position);
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 1.0);
+            renderer.shadowMapEnabled = true;
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            createSky();
+            createSun();
+            createStar(4, 50, 3, 0.01);
+            createStar(6, 30, 4, 0.012);
+            //create_geometry();
+            create_stats();
+            document.body.appendChild(renderer.domElement);
+            render();
+        }
+
+        function create_stats() {
+            stats = new Stats();
+            stats.setMode(0);
+            stats.domElement.style.position = "absolute";
+            stats.domElement.style.left = "0";
+            stats.domElement.style.top = "0";
+            document.body.appendChild(stats.domElement);
+            console.log("created stats");
+
+        }
+
+        function createSky() {
+            var skyboxGeo = new THREE.BoxGeometry(1000, 1000, 1000);
+            var skyboxMat = new THREE.MeshBasicMaterial({
+                color: 0x252241,
+                side: THREE.BackSide,
+            });
+            var skyboxMesh = new THREE.Mesh(skyboxGeo, skyboxMat);
+
+            scene.add(skyboxMesh);
+        }
+
+        function addGlow() {
+
+        }
+
+        function createSun() {
+            var sun = createStar(10, 0);
+            sun.prop.stall = true;
+            var spriteMaterial = new THREE.SpriteMaterial("assets/glow.png");
+
+
+        }
+
+        function createStar(radius, distance, angle, angularVel) {
+            var starGeo = new THREE.SphereGeometry(radius, 30, 30);
+            var starMat = new THREE.MeshNormalMaterial();
+            var starMesh = new THREE.Mesh(starGeo, starMat);
+
+            var prop = {
+                radius: radius,
+                distance: distance,
+                angle: (typeof (angle) !== 'undefined') ? angle : 0,
+                angularVel: (typeof (angularVel) !== 'undefined') ? angularVel : 0,
+                stall: false,
+            };
+
+            starMesh.prop = prop;
+            moveToAngle(starMesh);
+            stars.push(starMesh);
+            scene.add(starMesh);
+            return starMesh;
+        }
+
+        function create_geometry() {
+            var cubeGeo = new THREE.BoxGeometry(10, 10, 10);
+            var cubeArr = [new THREE.MeshBasicMaterial({
+                    color: 0xff0000
+                }), new THREE.MeshPhongMaterial({
+                    color: 0x00ff00
+                }),
+                        new THREE.MeshPhongMaterial({
+                    color: 0x0000ff
+                }), new THREE.MeshPhongMaterial({
+                    color: 0xffff00
+                }),
+                        new THREE.MeshPhongMaterial({
+                    color: 0x00ffff
+                }), new THREE.MeshPhongMaterial({
+                    color: 0xff00ff
+                })];
+
+            var cubeMat = new THREE.MeshFaceMaterial(cubeArr);
+            var cube = new THREE.Mesh(cubeGeo, cubeMat);
+            scene.add(cube);
+            cube.castShadow = true;
+
+            var sphereGeo = new THREE.SphereGeometry(10, 30, 30);
+            var sphereMat = new THREE.MeshPhongMaterial({
+                color: 0xffff00
+            });
+            sphereMat.specular = new THREE.Color(0xffffff);
+
+
+            var sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+            sphereMesh.position.set(20, 5, 0);
+            sphereMesh.name = 'sphere';
+            scene.add(sphereMesh);
+
+            var outlineMat = new THREE.MeshBasicMaterial({
+                color: 0xFF0000,
+                side: THREE.BackSide,
+            });
+
+            var outlineMesh = new THREE.Mesh(sphereGeo.clone(), outlineMat);
+            //           utlineMesh.position.z = 0;
+            outlineMesh.position = new THREE.Vector3(20, 5, 0);
+            //= new THREE.Vector3(20, 5, 0);
+            outlineMesh.scale.multiplyScalar(1.05);
+            scene.add(outlineMesh);
+            outlineMesh.name = "outline";
+
+            var lineGeo = new THREE.Geometry();
+            var linevertsArr = lineGeo.vertices;
+            linevertsArr.push(new THREE.Vector3(-15, 0, 0), new THREE.Vector3(-15, 100, 0));
+            lineGeo.computeLineDistances();
+            var lineMat = new THREE.LineDashedMaterial({
+                color: 0x00cc00,
+                dashSize: 4,
+                gapSize: 2,
+            });
+            var line = new THREE.Line(lineGeo, lineMat);
+            scene.add(line);
+            var light = new THREE.PointLight(0xffffff);
+            light.position.set(100, 250, 0);
+            //light.castShadow = true;
+            scene.add(light);
+            var ambientLight = new THREE.AmbientLight(0x222222);
+            scene.add(ambientLight);
+            var floorTexture = new THREE.ImageUtils.loadTexture('tuts/assets/textures/debug.png');
+            floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+            floorTexture.repeat.set(10, 10);
+            var floorGeo = new THREE.PlaneGeometry(100, 100);
+            var floorMat = new THREE.MeshPhongMaterial({
+                map: floorTexture,
+                side: THREE.DoubleSide
+            });
+
+            var floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = 0.5 * Math.PI;
+            floor.position.y = -5;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+
+
+        }
+
+        function moveToAngle(star) {
+            var prop = star.prop;
+            if (!prop) {
+                return;
+            }
+            var x = prop.distance * Math.sin(prop.angle);
+            var z = prop.distance * Math.cos(prop.angle);
+            star.position.set(x, 0, z);
+        }
+
+        function updateStar(star) {
+            star.prop.angle += star.prop.angularVel;
+            moveToAngle(star);
+        }
+
+        function render() {
+            stats.update();
+            controls.update();
+            for (var star of stars)
+                if (!star.prop.stall) updateStar(star);
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+
+</html>
