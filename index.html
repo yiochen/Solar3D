@@ -29,10 +29,16 @@
         var renderer;
         var controls;
         var sun;
+        var counter = 0;
         var CONST = {
+            minRadius: 2,
             maxRadius: 10,
-            primaryColor: 0x98cbff,
-            primaryColor2: 0xcbff98,
+            minDistance: 50,
+            maxDistance: 200,
+            minAngVel: 0.005,
+            maxAngVel: 0.05,
+            primaryColor: 0x00AAFF,
+            primaryColor2: 0x284BD7,
             accentColor: 0xff98cb,
             boxSize: 10000,
         };
@@ -53,6 +59,8 @@
             renderer.setClearColor(0x000000, 1.0);
             renderer.shadowMapEnabled = true;
             controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.maxPolarAngle = Math.PI / 2;
+            controls.maxDistance = CONST.boxSize / 2;
             createObjects();
 
             //create_geometry();
@@ -72,27 +80,59 @@
 
         }
 
+        function rndBtw(x, y) {
+            return Math.random() * (y - x) + x;
+        }
+
+        function createRandomStar() {
+            return createStar(
+                rndBtw(CONST.minRadius, CONST.maxRadius),
+                rndBtw(CONST.minDistance, CONST.maxDistance),
+                Math.random() * Math.PI * 2,
+                rndBtw(CONST.minAngVel, CONST.maxAngVel));
+        }
+
         function createObjects() {
             createSky();
             createFloor();
             createSun();
-            createStar(4, 50, 3, 0.01);
-            createStar(6, 70, 4, 0.012);
+            createStar(4, 50, 3, 0.01).prop.func.push(revolve, sinBounce, ring);
+
+            createStar(6, 70, 4, 0.012).prop.func.push(revolve, disco);
+            for (var i = 2; i < 10; i++) {
+                createRandomStar().prop.func.push(revolve);
+            }
             createLight();
+            createFog();
+        }
+
+        function createFog() {
+            var fog = new THREE.FogExp2(CONST.primaryColor, 0.001);
+            scene.fog = fog;
         }
 
         function createLight() {
-            var ambLight = new THREE.AmbientLight(0x262626);
-            scene.add(ambLight);
-            var pointLight = new THREE.PointLight(CONST.accentColor, 2, 1000);
-            scene.add(pointLight);
-            var dirLight = new THREE.DirectionalLight(CONST.primaryColor, 0.5);
-            dirLight.position.set(0, 1, 0);
-            scene.add(dirLight);
+            var hemiLight = new THREE.HemisphereLight(CONST.primaryColor, CONST.primaryColor2, 1);
+            scene.add(hemiLight);
+            var sunLight = new THREE.PointLight(CONST.accentColor, 1, 1000);
+            scene.add(sunLight);
+            //var dirLight = new THREE.DirectionalLight(CONST.primaryColor, 0.5);
+            //dirLight.position.set(0, 1, 0);
+            //scene.add(dirLight);
 
-            var dirLight2 = new THREE.DirectionalLight(CONST.primaryColor2, 0.5);
-            dirLight2.position.set(0, -1, 0);
-            scene.add(dirLight2);
+            //var dirLight2 = new THREE.DirectionalLight(CONST.primaryColor2, 0.5);
+            //dirLight2.position.set(0, -1, 0);
+            //scene.add(dirLight2);
+            var spotLight = new THREE.SpotLight(0xffffff);
+            spotLight.position.set(0, 1000, 0);
+            spotLight.castShadow = true;
+            spotLight.onlyShadow = true;
+            spotLight.intensity = 0.5;
+            //            spotLight.shadowMapWidth = 1024; // spotLight.shadowMapHeight = 1024;
+            spotLight.exponent = 9.42;
+            spotLight.angle = 1.234;
+            scene.add(spotLight);
+
         }
 
         function createSky() {
@@ -130,9 +170,9 @@
             sun.material = new THREE.MeshBasicMaterial({
                 map: new THREE.ImageUtils.loadTexture('assets/sunmap.jpg')
             });
-
+            sun.castShadow = false;
             //sun.prop.stall = true;
-
+            sun.prop.func.push(rotate);
             var spriteMaterial = new THREE.SpriteMaterial({
                 map: new THREE.ImageUtils.loadTexture('assets/glow.png'),
                 useScreenCoordinates: false,
@@ -160,10 +200,10 @@
                 angle: (typeof (angle) !== 'undefined') ? angle : 0,
                 angularVel: (typeof (angularVel) !== 'undefined') ? angularVel : 0,
                 stall: false,
+                func: [],
             };
-
+            starMesh.castShadow = true;
             starMesh.prop = prop;
-            moveToAngle(starMesh);
             stars.push(starMesh);
             scene.add(starMesh);
             return starMesh;
@@ -174,23 +214,55 @@
 
 
 
-        function moveToAngle(star) {
+        function revolve(star) {
             var prop = star.prop;
             if (!prop) {
                 return;
             }
+            star.prop.angle += star.prop.angularVel;
             var x = prop.distance * Math.sin(prop.angle);
             var z = prop.distance * Math.cos(prop.angle);
             star.position.set(x, 0, z);
         }
 
-        function updateStar(star) {
-            star.prop.angle += star.prop.angularVel;
-            moveToAngle(star);
+        function rotate(star) {
             star.rotation.y += 0.1;
         }
 
+        function updateStar(star) {
+            for (var func of star.prop.func) {
+                func(star);
+            }
+        }
+
+        function sinBounce(star) {
+            star.position.set(star.position.x, 5 * Math.sin(counter / 10), star.position.z);
+        }
+
+        function ring(star) {
+            if (star.prop.ring) {
+                //star.prop.ring.rotation.x += 0.05;
+                star.prop.ring.rotation.y += 0.05;
+                //star.prop.ring.rotation.z += 0.05
+            } else {
+                var material = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    side: THREE.DoubleSide,
+                });
+                var radius = star.prop.radius * 1.5;
+                var circleGeometry = new THREE.CircleGeometry(radius, 30);
+                var circle = new THREE.Mesh(circleGeometry, material);
+                star.add(circle);
+                star.prop.ring = circle;
+            }
+        }
+
+        function disco(star) {
+            star.material.emissive = new THREE.Color(Math.random() * 0xFFFFFF);
+        }
+
         function render() {
+            counter++;
             stats.update();
             controls.update();
             for (var star of stars)
