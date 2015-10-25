@@ -29,6 +29,13 @@
         var renderer;
         var controls;
         var sun;
+        var CONST = {
+            maxRadius: 10,
+            primaryColor: 0x98cbff,
+            primaryColor2: 0xcbff98,
+            accentColor: 0xff98cb,
+            boxSize: 10000,
+        };
         var stars = [];
         window.onload = init;
 
@@ -37,7 +44,7 @@
             //view_angle, ratio(width/height), near, far
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 20000);
             scene.add(camera);
-            camera.position.set(0, 300, 0);
+            camera.position.set(0, 0, 300);
             camera.lookAt(scene.position);
             renderer = new THREE.WebGLRenderer({
                 antialias: true
@@ -46,10 +53,8 @@
             renderer.setClearColor(0x000000, 1.0);
             renderer.shadowMapEnabled = true;
             controls = new THREE.OrbitControls(camera, renderer.domElement);
-            createSky();
-            createSun();
-            createStar(4, 50, 3, 0.01);
-            createStar(6, 30, 4, 0.012);
+            createObjects();
+
             //create_geometry();
             create_stats();
             document.body.appendChild(renderer.domElement);
@@ -67,10 +72,33 @@
 
         }
 
+        function createObjects() {
+            createSky();
+            createFloor();
+            createSun();
+            createStar(4, 50, 3, 0.01);
+            createStar(6, 70, 4, 0.012);
+            createLight();
+        }
+
+        function createLight() {
+            var ambLight = new THREE.AmbientLight(0x262626);
+            scene.add(ambLight);
+            var pointLight = new THREE.PointLight(CONST.accentColor, 2, 1000);
+            scene.add(pointLight);
+            var dirLight = new THREE.DirectionalLight(CONST.primaryColor, 0.5);
+            dirLight.position.set(0, 1, 0);
+            scene.add(dirLight);
+
+            var dirLight2 = new THREE.DirectionalLight(CONST.primaryColor2, 0.5);
+            dirLight2.position.set(0, -1, 0);
+            scene.add(dirLight2);
+        }
+
         function createSky() {
-            var skyboxGeo = new THREE.BoxGeometry(1000, 1000, 1000);
+            var skyboxGeo = new THREE.BoxGeometry(CONST.boxSize, CONST.boxSize, CONST.boxSize);
             var skyboxMat = new THREE.MeshBasicMaterial({
-                color: 0x252241,
+                color: CONST.primaryColor,
                 side: THREE.BackSide,
             });
             var skyboxMesh = new THREE.Mesh(skyboxGeo, skyboxMat);
@@ -78,21 +106,52 @@
             scene.add(skyboxMesh);
         }
 
+        function createFloor() {
+            var floorGeo = new THREE.PlaneGeometry(CONST.boxSize, CONST.boxSize);
+            var floorMat = new THREE.MeshPhongMaterial({
+                color: 0xFFFFFF,
+                side: THREE.DoubleSide
+            });
+
+            var floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = 0.5 * Math.PI;
+            floor.position.y = -CONST.maxRadius - 3;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+        }
+
         function addGlow() {
 
         }
 
         function createSun() {
-            var sun = createStar(10, 0);
-            sun.prop.stall = true;
-            var spriteMaterial = new THREE.SpriteMaterial("assets/glow.png");
+            sun = createStar(10, 0);
+            sun.material = new THREE.MeshBasicMaterial({
+                map: new THREE.ImageUtils.loadTexture('assets/sunmap.jpg')
+            });
 
+            //sun.prop.stall = true;
+
+            var spriteMaterial = new THREE.SpriteMaterial({
+                map: new THREE.ImageUtils.loadTexture('assets/glow.png'),
+                useScreenCoordinates: false,
+                color: 0xFFCD00,
+                transparent: false,
+                blending: THREE.AdditiveBlending,
+            });
+            var sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(sun.prop.radius * 4, sun.prop.radius * 4, 1.0);
+            sun.add(sprite);
 
         }
 
         function createStar(radius, distance, angle, angularVel) {
             var starGeo = new THREE.SphereGeometry(radius, 30, 30);
-            var starMat = new THREE.MeshNormalMaterial();
+            var starMat = new THREE.MeshPhongMaterial({
+                color: 0xFFFFFF,
+                emissive: 0x000033,
+            });
             var starMesh = new THREE.Mesh(starGeo, starMat);
 
             var prop = {
@@ -110,89 +169,10 @@
             return starMesh;
         }
 
-        function create_geometry() {
-            var cubeGeo = new THREE.BoxGeometry(10, 10, 10);
-            var cubeArr = [new THREE.MeshBasicMaterial({
-                    color: 0xff0000
-                }), new THREE.MeshPhongMaterial({
-                    color: 0x00ff00
-                }),
-                        new THREE.MeshPhongMaterial({
-                    color: 0x0000ff
-                }), new THREE.MeshPhongMaterial({
-                    color: 0xffff00
-                }),
-                        new THREE.MeshPhongMaterial({
-                    color: 0x00ffff
-                }), new THREE.MeshPhongMaterial({
-                    color: 0xff00ff
-                })];
-
-            var cubeMat = new THREE.MeshFaceMaterial(cubeArr);
-            var cube = new THREE.Mesh(cubeGeo, cubeMat);
-            scene.add(cube);
-            cube.castShadow = true;
-
-            var sphereGeo = new THREE.SphereGeometry(10, 30, 30);
-            var sphereMat = new THREE.MeshPhongMaterial({
-                color: 0xffff00
-            });
-            sphereMat.specular = new THREE.Color(0xffffff);
-
-
-            var sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
-            sphereMesh.position.set(20, 5, 0);
-            sphereMesh.name = 'sphere';
-            scene.add(sphereMesh);
-
-            var outlineMat = new THREE.MeshBasicMaterial({
-                color: 0xFF0000,
-                side: THREE.BackSide,
-            });
-
-            var outlineMesh = new THREE.Mesh(sphereGeo.clone(), outlineMat);
-            //           utlineMesh.position.z = 0;
-            outlineMesh.position = new THREE.Vector3(20, 5, 0);
-            //= new THREE.Vector3(20, 5, 0);
-            outlineMesh.scale.multiplyScalar(1.05);
-            scene.add(outlineMesh);
-            outlineMesh.name = "outline";
-
-            var lineGeo = new THREE.Geometry();
-            var linevertsArr = lineGeo.vertices;
-            linevertsArr.push(new THREE.Vector3(-15, 0, 0), new THREE.Vector3(-15, 100, 0));
-            lineGeo.computeLineDistances();
-            var lineMat = new THREE.LineDashedMaterial({
-                color: 0x00cc00,
-                dashSize: 4,
-                gapSize: 2,
-            });
-            var line = new THREE.Line(lineGeo, lineMat);
-            scene.add(line);
-            var light = new THREE.PointLight(0xffffff);
-            light.position.set(100, 250, 0);
-            //light.castShadow = true;
-            scene.add(light);
-            var ambientLight = new THREE.AmbientLight(0x222222);
-            scene.add(ambientLight);
-            var floorTexture = new THREE.ImageUtils.loadTexture('tuts/assets/textures/debug.png');
-            floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-            floorTexture.repeat.set(10, 10);
-            var floorGeo = new THREE.PlaneGeometry(100, 100);
-            var floorMat = new THREE.MeshPhongMaterial({
-                map: floorTexture,
-                side: THREE.DoubleSide
-            });
-
-            var floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = 0.5 * Math.PI;
-            floor.position.y = -5;
-            floor.receiveShadow = true;
-            scene.add(floor);
 
 
 
-        }
+
 
         function moveToAngle(star) {
             var prop = star.prop;
@@ -207,6 +187,7 @@
         function updateStar(star) {
             star.prop.angle += star.prop.angularVel;
             moveToAngle(star);
+            star.rotation.y += 0.1;
         }
 
         function render() {
