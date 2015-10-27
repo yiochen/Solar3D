@@ -50,7 +50,7 @@
             //view_angle, ratio(width/height), near, far
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 20000);
             scene.add(camera);
-            camera.position.set(0, 0, 300);
+            camera.position.set(0, 100, 300);
             camera.lookAt(scene.position);
             renderer = new THREE.WebGLRenderer({
                 antialias: true
