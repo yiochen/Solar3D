@@ -22,25 +22,29 @@
     <script type="text/javascript" src="libs/dat.gui.min.js"></script>
     <script type="text/javascript" src="libs/stats.min.js"></script>
     <script type="text/javascript" src="libs/OrbitControls.js"></script>
+    <script type="text/javascript" src="libs/Projector.js"></script>
     <script type="text/javascript">
         var scene;
         var camera;
         var stats;
         var renderer;
         var controls;
+        var projector;
         var sun;
         var counter = 0;
         var CONST = {
             minRadius: 2,
             maxRadius: 10,
             minDistance: 50,
-            maxDistance: 200,
-            minAngVel: 0.005,
-            maxAngVel: 0.05,
+            maxDistance: 150,
+            minVel: 3,
+            maxVel: 6,
             primaryColor: 0x00AAFF,
             primaryColor2: 0x284BD7,
             accentColor: 0xff98cb,
             boxSize: 10000,
+            accel: 0.5,
+            velDeg: 1,
         };
         var stars = [];
         window.onload = init;
@@ -52,12 +56,13 @@
             scene.add(camera);
             camera.position.set(0, 100, 300);
             camera.lookAt(scene.position);
+            projector = new THREE.Projector();
             renderer = new THREE.WebGLRenderer({
                 antialias: true
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setClearColor(0x000000, 1.0);
-            renderer.shadowMapEnabled = true;
+            renderer.shadowMap.enabled = true;
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.maxPolarAngle = Math.PI / 2;
             controls.maxDistance = CONST.boxSize / 2;
@@ -66,6 +71,7 @@
             //create_geometry();
             create_stats();
             document.body.appendChild(renderer.domElement);
+            document.addEventListener('mousedown', onDocumentMouseDown, false);
             render();
         }
 
@@ -85,11 +91,13 @@
         }
 
         function createRandomStar() {
+            var distance;
+            var radius
             return createStar(
-                rndBtw(CONST.minRadius, CONST.maxRadius),
-                rndBtw(CONST.minDistance, CONST.maxDistance),
+                radius = rndBtw(CONST.minRadius, CONST.maxRadius),
+                distance = rndBtw(CONST.minDistance, CONST.maxDistance),
                 Math.random() * Math.PI * 2,
-                rndBtw(CONST.minAngVel, CONST.maxAngVel));
+                rndBtw(CONST.minVel, CONST.maxVel) / distance / radius);
         }
 
         function createObjects() {
@@ -172,14 +180,14 @@
             });
             sun.castShadow = false;
             //sun.prop.stall = true;
-            sun.prop.func.push(rotate);
+            sun.prop.func.push(rotate, jump);
             var spriteMaterial = new THREE.SpriteMaterial({
                 map: new THREE.ImageUtils.loadTexture('assets/glow.png'),
-                useScreenCoordinates: false,
                 color: 0xFFCD00,
                 transparent: false,
                 blending: THREE.AdditiveBlending,
             });
+
             var sprite = new THREE.Sprite(spriteMaterial);
             sprite.scale.set(sun.prop.radius * 4, sun.prop.radius * 4, 1.0);
             sun.add(sprite);
@@ -209,8 +217,27 @@
             return starMesh;
         }
 
-
-
+        function onDocumentMouseDown(event) {
+            console.log("click");
+            var mouse = {};
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
+            vector.unproject(camera);
+            var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+            var intersects = ray.intersectObjects([sun]);
+            if (intersects.length > 0) {
+                console.log("Hit!!@" + toString(intersects[0].point));
+                sun.prop.speed = 5;
+            }
+        }
+        //////////////////////////////////////////////////////////
+        //------------------------------------------------------//
+        //------------------------------------------------------//
+        //-----------------------Actions------------------------//
+        //------------------------------------------------------//
+        //------------------------------------------------------//
+        //////////////////////////////////////////////////////////
 
 
 
@@ -232,6 +259,31 @@
         function updateStar(star) {
             for (var func of star.prop.func) {
                 func(star);
+            }
+        }
+
+        function jump(star) {
+            if (star.prop.speed == null) {
+                return;
+            } else {
+                var pos = star.position.y;
+                pos += star.prop.speed;
+
+                if (pos < 0 && star.prop.speed > 0) {
+                    pos = 0;
+                    star.prop.speed = null;
+                } else {
+                    pos += star.prop.speed;
+                    if (pos < 0 && star.prop.speed < 0) {
+                        pos = 0;
+                        star.prop.speed = -star.prop.speed - CONST.velDeg;
+                    } else {
+                        star.prop.speed -= CONST.accel;
+                    }
+
+
+                }
+                star.position.set(star.position.x, pos, star.position.z);
             }
         }
 
