@@ -94,7 +94,7 @@ var Star = function (config) {
     }
     this.addR = function (dis) {
         var newR = this.getR() + dis;
-        
+
         if (newR < 0) newR = 0.01;
         var scale = newR / this.radius;
         this.starMesh.scale.set(scale, scale, scale);
@@ -164,7 +164,7 @@ function jump(star) {
         return;
     } else {
 
-        
+
         var pos = star.starMesh.position.y;
         pos += star.speed;
 
@@ -225,8 +225,8 @@ function follow(star) {
 
 function shoot(star) {
     //TODO
-    if (counter % 30 == 0 && keyboard.pressed("up")) {
-        
+    if ((counter % 30 == 0 || beastmode) && keyboard.pressed("up")) {
+
         //generate new star
         var star = new Star({
             radius: 2,
@@ -258,7 +258,7 @@ function kill(star) {
     star.radius = 0;
     scene.remove(star.starMesh);
     star.dead = true;
-    
+
     return true;
 }
 

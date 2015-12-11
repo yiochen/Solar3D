@@ -6,6 +6,7 @@ var controls;
 var projector;
 var sun;
 var particle;
+var beastmode = false;
 var pressDistance = 0;
 var keyboard = new KeyboardState();
 var counter = 0;
@@ -51,6 +52,7 @@ function init() {
 
 
     document.addEventListener('mousedown', onDocumentMouseDown, false);
+    document.addEventListener('mouseup', onDocumentMouseUp, false);
     //document.addEventListener('mousemove', onDocumentMouseMove, false);
     render();
 }
@@ -221,7 +223,7 @@ function createParticle(x, y, z) {
 }
 
 function onDocumentMouseDown(event) {
-
+    beastmode = true;
     var mouse = {};
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -234,6 +236,10 @@ function onDocumentMouseDown(event) {
 
         sun.speed = 5;
     }
+}
+
+function onDocumentMouseUp(event) {
+    beastmode = false;
 }
 
 function collisionDetect(stars) {
