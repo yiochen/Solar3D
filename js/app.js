@@ -62,7 +62,7 @@ function create_stats() {
     stats.domElement.style.left = "0";
     stats.domElement.style.top = "0";
     document.body.appendChild(stats.domElement);
-    
+
 
 }
 
@@ -79,7 +79,7 @@ function createRandomStar() {
         angle: Math.random() * Math.PI * 2,
         angularVel: rndBtw(CONST.minVel, CONST.maxVel) / distance / radius,
     });
-    
+
     star.addTo(scene);
     stars.push(star);
     return star;
@@ -177,12 +177,12 @@ function createSun() {
         distance: 0
     });
     sun.setMat(new THREE.MeshBasicMaterial({
-        map: new THREE.ImageUtils.loadTexture('../assets/sunmap.jpg')
+        map: new THREE.ImageUtils.loadTexture('./assets/sunmap.jpg')
     }));
     //sun.prop.stall = true;
     sun.func.push(rotate, jump);
     var spriteMaterial = new THREE.SpriteMaterial({
-        map: new THREE.ImageUtils.loadTexture('../assets/glow.png'),
+        map: new THREE.ImageUtils.loadTexture('./assets/glow.png'),
         color: 0xFFCD00,
         transparent: false,
         blending: THREE.AdditiveBlending,
@@ -221,7 +221,7 @@ function createParticle(x, y, z) {
 }
 
 function onDocumentMouseDown(event) {
-    
+
     var mouse = {};
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -231,7 +231,7 @@ function onDocumentMouseDown(event) {
     var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
     var intersects = ray.intersectObjects([sun.starMesh]);
     if (intersects.length > 0) {
-        
+
         sun.speed = 5;
     }
 }
@@ -271,7 +271,7 @@ function render() {
     stats.update();
     keyboard.update();
     if (keyboard.pressed("left")) {
-        
+
         pressDistance += 1;
     }
 
