@@ -5,11 +5,12 @@ var AntiMatter = {
     color: 0x05011F,
 }
 var Neutral = {
-    color: 0xFFFFFF,
+    color: 0xFAA3E1,
 }
 var MATTER = "matter";
 var ANTIMATTER = "antimatter";
 var NEUTRAL = "neutral";
+var BULLET = "bullet";
 
 function setAttr(el, attrs) {
     if (!attrs) return el;
@@ -22,6 +23,8 @@ function setAttr(el, attrs) {
 function initConfig(attrs) {
     var config = {
         type: NEUTRAL,
+        attribute: 1,
+        mask: 4,
         emissive: 0x000033,
         radius: 5,
         distance: 10,
@@ -29,6 +32,7 @@ function initConfig(attrs) {
         angularVel: 0,
         static: false,
         dead: false,
+        fallspeed: 0,
         func: [],
     };
     return setAttr(config, attrs);
@@ -38,9 +42,26 @@ var Star = function (config) {
     setAttr(this, initConfig());
     setAttr(this, config);
     this.starGeo = new THREE.SphereGeometry(config.radius, 30, 30);
-    if (this.type == MATTER) this.color = Matter.color;
-    if (this.type == ANTIMATTER) this.color = AntiMatter.color;
-    if (this.type == NEUTRAL) this.color = Neutral.color;
+    if (this.type == MATTER) {
+        this.color = Matter.color;
+        this.attribute = 2;
+        this.mask = 6;
+    }
+    if (this.type == ANTIMATTER) {
+        this.color = AntiMatter.color;
+        this.attribute = 4;
+        this.mask = 15;
+    }
+    if (this.type == NEUTRAL) {
+        this.color = Neutral.color;
+        this.attribute = 1;
+        this.mask = 4;
+    }
+    if (this.type == BULLET) {
+        this.color = Matter.color;
+        this.attribute = 8;
+        this.mask = 4;
+    }
     this.starMat = new THREE.MeshPhongMaterial({
         color: this.color,
         emissive: this.emissive,
@@ -73,7 +94,7 @@ var Star = function (config) {
     }
     this.addR = function (dis) {
         var newR = this.getR() + dis;
-        //console.log("changed scale from " + this.starMesh.scale.x + " radius is " + this.starMesh.geometry.parameters.radius + " and " + this.radius * this.starMesh.scale.x);
+        
         if (newR < 0) newR = 0.01;
         var scale = newR / this.radius;
         this.starMesh.scale.set(scale, scale, scale);
@@ -125,7 +146,7 @@ function rotate(star) {
 
 function updateStar(star) {
     for (var func of star.func) {
-        //console.log("run " + func);
+        //        console.log("run " + func);
         func(star);
     }
 }
@@ -143,7 +164,7 @@ function jump(star) {
         return;
     } else {
 
-        console.log("star jumping");
+        
         var pos = star.starMesh.position.y;
         pos += star.speed;
 
@@ -192,11 +213,40 @@ function disco(star) {
 }
 
 function follow(star) {
-    star.angularVel = -pressDistance / 1500;
+    var limit = CONST.maxVel / star.distance / star.getR();
+    if (keyboard.pressed("left")) {
+        star.angularVel += 0.001;
+        if (star.angularVel > limit) star.angularVel = limit;
+    } else if (keyboard.pressed("right")) {
+        star.angularVel -= 0.001;
+        if (-star.angularVel > limit) star.angularVel = -limit;
+    }
 }
 
-function shot(star) {
+function shoot(star) {
     //TODO
+    if (counter % 30 == 0 && keyboard.pressed("up")) {
+        
+        //generate new star
+        var star = new Star({
+            radius: 2,
+            distance: star.distance,
+            angle: star.angle,
+            angularVel: 0,
+            type: BULLET,
+            fallspeed: 1,
+            func: [revolve, graviFall],
+        });
+        star.addTo(scene);
+        stars.push(star);
+    }
+}
+
+function graviFall(star) {
+    star.distance -= star.fallspeed;
+    if (star.distance < 1) {
+        kill(star);
+    }
 }
 
 function strengthComp(star1, star2) {
@@ -208,7 +258,7 @@ function kill(star) {
     star.radius = 0;
     scene.remove(star.starMesh);
     star.dead = true;
-    console.log("kill star");
+    
     return true;
 }
 

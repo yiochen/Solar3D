@@ -11,7 +11,7 @@ var keyboard = new KeyboardState();
 var counter = 0;
 var CONST = {
     minRadius: 2,
-    maxRadius: 10,
+    maxRadius: 5,
     minDistance: 50,
     maxDistance: 100,
     minVel: 3,
@@ -62,7 +62,7 @@ function create_stats() {
     stats.domElement.style.left = "0";
     stats.domElement.style.top = "0";
     document.body.appendChild(stats.domElement);
-    console.log("created stats");
+    
 
 }
 
@@ -73,13 +73,13 @@ function rndBtw(x, y) {
 function createRandomStar() {
     var radius, distance;
     var star = new Star({
-        type: (Math.random() < 0.5) ? MATTER : ANTIMATTER,
+        type: ANTIMATTER,
         radius: radius = rndBtw(CONST.minRadius, CONST.maxRadius),
         distance: distance = rndBtw(CONST.minDistance, CONST.maxDistance),
         angle: Math.random() * Math.PI * 2,
         angularVel: rndBtw(CONST.minVel, CONST.maxVel) / distance / radius,
     });
-    console.log("created at " + star.angle);
+    
     star.addTo(scene);
     stars.push(star);
     return star;
@@ -99,7 +99,7 @@ function createObjects() {
 
 function createPlayer() {
     var star = new Star({
-        type: MATTER,
+        type: NEUTRAL,
         radius: 10,
         distance: CONST.maxDistance + 20,
         angle: 0,
@@ -107,7 +107,7 @@ function createPlayer() {
     });
     star.addTo(scene);
     stars.push(star);
-    star.func.push(follow, revolve);
+    star.func.push(follow, revolve, shoot);
     return star;
 }
 
@@ -221,7 +221,7 @@ function createParticle(x, y, z) {
 }
 
 function onDocumentMouseDown(event) {
-    console.log("click");
+    
     var mouse = {};
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -231,7 +231,7 @@ function onDocumentMouseDown(event) {
     var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
     var intersects = ray.intersectObjects([sun.starMesh]);
     if (intersects.length > 0) {
-        console.log("Hit!!@" + toString(intersects[0].point));
+        
         sun.speed = 5;
     }
 }
@@ -243,12 +243,16 @@ function collisionDetect(stars) {
             var distance = stars[i].getPos().sub(stars[j].getPos()).length();
             if (distance < 0) alert("length cannot be smaller than 0");
             var amount = stars[i].getR() + stars[j].getR() - distance;
-            if (stars[i].type == stars[j].type && stars[i].type != NEUTRAL) {
+            //            if (stars[i].type == stars[j].type && stars[i].type != NEUTRAL) {
+            if ((stars[i].mask & stars[j].attribute) > 0 && (stars[i].attribute == stars[j].attribute)) {
                 if (amount > 0) absorb(stars[i], stars[j], amount / 2);
             }
-            if (stars[i].type != stars[j].type && stars[i].type != NEUTRAL && stars[j].type != NEUTRAL) {
+            if ((stars[i].mask & stars[j].attribute) > 0 && (stars[i].attribute != stars[j].attribute)) {
                 if (amount > 0) cancel(stars[i], stars[j], amount / 2);
             }
+            //            if (stars[i].type != stars[j].type && stars[i].type != NEUTRAL && stars[j].type != NEUTRAL) {
+            //                if (amount > 0) cancel(stars[i], stars[j], amount / 2);
+            //            }
         }
     }
     var len = stars.length;
@@ -267,7 +271,7 @@ function render() {
     stats.update();
     keyboard.update();
     if (keyboard.pressed("left")) {
-        console.log("pressed left");
+        
         pressDistance += 1;
     }
 
